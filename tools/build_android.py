@@ -19,6 +19,11 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PROJECT = REPOSITORY_ROOT / "local-projects" / "Darkest-Dungeon-Unity"
 APK_PATH = REPOSITORY_ROOT / "artifacts" / "Darkest-Dungeon-Unity.apk"
 LOG_PATH = REPOSITORY_ROOT / "artifacts" / "unity-android-build.log"
+REQUIRED_CAMPAIGN_SCENES = (
+    "Assets/Scenes/CampaignSelection.unity",
+    "Assets/Scenes/EstateManagement.unity",
+    "Assets/Scenes/Dungeon.unity",
+)
 
 # These are the game-asset directories explicitly excluded by the upstream
 # project's .gitignore. Everything else in the archive is left untouched.
@@ -221,6 +226,31 @@ def check_project_version(project: Path) -> None:
         )
 
 
+def check_campaign_scenes(project: Path) -> None:
+    settings = project / "ProjectSettings" / "EditorBuildSettings.asset"
+    if not settings.is_file():
+        raise BuildError(f"Missing Unity Build Settings file: {settings}")
+
+    enabled_scenes: set[str] = set()
+    current_enabled = False
+    for line in settings.read_text(encoding="utf-8", errors="replace").splitlines():
+        item = line.strip()
+        if item.startswith("- enabled:"):
+            current_enabled = item.split(":", 1)[1].strip() == "1"
+        elif item.startswith("enabled:"):
+            current_enabled = item.split(":", 1)[1].strip() == "1"
+        elif item.startswith("path:") and current_enabled:
+            enabled_scenes.add(item.split(":", 1)[1].strip())
+
+    missing = [scene for scene in REQUIRED_CAMPAIGN_SCENES if scene not in enabled_scenes]
+    if missing:
+        formatted = "\n".join(f"  {scene}" for scene in missing)
+        raise BuildError(
+            "Campaign build scenes are missing or disabled in Editor Build Settings:\n"
+            f"{formatted}"
+        )
+
+
 def find_unity(explicit: str | None) -> Path:
     candidates: list[Path] = []
     if explicit:
@@ -316,6 +346,7 @@ def main() -> int:
         project = args.project.expanduser().resolve()
         ensure_project(project)
         check_project_version(project)
+        check_campaign_scenes(project)
 
         total_copied = 0
         for input_path in args.asset_input:
