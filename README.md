@@ -28,7 +28,7 @@ The first run clones the upstream project into the ignored `local-projects/` fol
 
 To import and validate the files without building, add `--prepare-only`. To use an existing checkout, pass `--project "path\to\Darkest-Dungeon-Unity"`.
 
-The build uses the scenes already enabled in the Unity project's Build Settings. It does not alter the campaign data or add game assets to this public repository. Unity may require its local license to be activated before batch builds can run.
+The build uses the scenes enabled in the Unity project's Build Settings and stops if Campaign Selection, Estate Management, or Dungeon is missing or disabled. It does not alter the campaign data or add game assets to this public repository. Unity may require its local license to be activated before batch builds can run.
 
 ## Android status
 
